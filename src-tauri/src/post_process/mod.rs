@@ -11,6 +11,5 @@ mod punctuation;
 mod question_inference;
 mod pipeline;
 
-pub use common::{TokenTiming, WordTiming, ProtectedText};
-pub use pipeline::{apply_pipeline, PostProcessConfig, PostProcessResult};
-pub use punctuation::FormattingConfig;
+pub use common::TokenTiming;
+pub use pipeline::{apply_pipeline, PostProcessConfig};

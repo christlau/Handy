@@ -919,6 +919,10 @@ pub fn get_default_settings() -> AppSettings {
         extra_recording_buffer_ms: 0,
         vad_enabled: default_vad_enabled(),
         overlay_style: default_overlay_style(),
+        remove_fillers_enabled: false,
+        remove_false_starts_enabled: false,
+        auto_punctuation_enabled: false,
+        bullet_points_enabled: false,
     }
 }
 

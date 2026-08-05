@@ -64,7 +64,6 @@ pub fn apply_pipeline(
 
     // Stage 3: filler and false-start removal
     {
-        let lang = config.app_language.clone();
         let remove_fillers = config.remove_fillers_enabled;
         let remove_false_starts = config.remove_false_starts_enabled;
         run_stage("filler_removal", &mut text, &mut changed, move |t| {
