@@ -45,7 +45,8 @@ export const VocabularyManager: React.FC = React.memo(() => {
   const loadTerms = useCallback(async () => {
     setTermsLoading(true);
     try {
-      const result = await (commands as any).vocabListTerms();
+      const cmd = (commands as any).vocabListTerms;
+      const result = typeof cmd === "function" ? await cmd() : [];
       setTerms(result ?? []);
     } catch (e) {
       console.error("Failed to load vocab terms:", e);
@@ -59,7 +60,8 @@ export const VocabularyManager: React.FC = React.memo(() => {
     if (correctionsLoaded) return;
     setCorrectionsLoading(true);
     try {
-      const result = await (commands as any).vocabListCorrections(null);
+      const cmd = (commands as any).vocabListCorrections;
+      const result = typeof cmd === "function" ? await cmd(null) : [];
       setCorrections(result ?? []);
       setCorrectionsLoaded(true);
     } catch (e) {
@@ -201,7 +203,11 @@ export const VocabularyManager: React.FC = React.memo(() => {
             <p className="text-sm text-mid-gray px-1">Loading…</p>
           ) : filteredTerms.length === 0 ? (
             <p className="text-sm text-mid-gray px-1">
-              {search ? "No matching terms." : "No vocabulary terms yet."}
+              {search
+                ? "No matching terms."
+                : typeof (commands as any).vocabListTerms !== "function"
+                ? "Vocabulary commands loading — restart the app if this persists."
+                : "No vocabulary terms yet. Add terms above or they will be learned automatically from your edits."}
             </p>
           ) : (
             <SettingsGroup>

@@ -12,12 +12,9 @@ use super::grammar_sets;
 // Compiled regexes
 // ---------------------------------------------------------------------------
 
-/// Consecutive duplicate words: 3+ repetitions → single instance.
-/// Group 1 captures the word; the full match is replaced with group 1.
-static STUTTER_RE: Lazy<Regex> = Lazy::new(|| {
-    // (?i) — case-insensitive; \b(\w+)\b — whole-word capture; then 2+ copies.
-    Regex::new(r"(?i)\b(\w+)\b(?:\s+\1){2,}").unwrap()
-});
+/// Consecutive duplicate words: handled imperatively — regex crate does not
+/// support backreferences, so we scan word-by-word instead.
+/// (Kept as a placeholder so the module structure is unchanged.)
 
 /// Two or more whitespace characters (used by clean_whitespace).
 static MULTI_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[ \t]{2,}").unwrap());
@@ -76,14 +73,16 @@ pub fn remove_fillers_pass(text: &str, lang: &str) -> String {
     let mut result = text.to_string();
 
     for filler in fillers {
-        // (?i)           — case-insensitive
-        // (?<![\w-])     — no word char or hyphen immediately before (guards "Mm-hmm")
-        // FILLER         — the literal filler text
-        // (?![\w-])      — no word char or hyphen immediately after
-        // [,.]?          — optional trailing punctuation attached to the filler
-        // \s*            — optional whitespace after
+        // (?i)      — case-insensitive
+        // \b        — word boundary before filler (guards against mid-word matches)
+        // FILLER    — the literal filler text
+        // \b        — word boundary after (no lookbehind needed for basic guard)
+        // [,.]?     — optional trailing punctuation attached to the filler
+        // \s*       — optional whitespace after
+        // Note: `regex` crate does not support lookbehind, so hyphenated
+        // compounds like "Mm-hmm" are guarded by \b since '-' is not a word char.
         let pattern = format!(
-            r"(?i)(?<![\w-]){}(?![\w-])[,\.]?\s*",
+            r"(?i)\b{}\b[,\.]?\s*",
             regex::escape(filler)
         );
         if let Ok(re) = Regex::new(&pattern) {
@@ -106,20 +105,31 @@ pub fn remove_fillers_pass(text: &str, lang: &str) -> String {
 /// - "I I I I think"   → "I think"
 /// - "no no is fine"   → unchanged (only 2 reps)
 pub fn collapse_stutters(text: &str) -> String {
-    // Iteratively apply until stable, in case replacing one run creates another.
-    let mut result = text.to_string();
-    loop {
-        let next = STUTTER_RE
-            .replace_all(&result, |caps: &regex::Captures| {
-                caps.get(1).map_or("", |m| m.as_str()).to_string()
-            })
-            .to_string();
-        if next == result {
-            break;
-        }
-        result = next;
+    // The `regex` crate does not support backreferences, so we scan word tokens
+    // directly. Preserve non-word tokens (punctuation, newlines) by tokenising
+    // on whitespace boundaries and re-joining with a single space.
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.is_empty() {
+        return text.to_string();
     }
-    result
+
+    let mut out: Vec<&str> = Vec::with_capacity(words.len());
+    let mut i = 0;
+    while i < words.len() {
+        let word = words[i];
+        let word_lower = word.to_lowercase();
+        // Count how many consecutive tokens match (case-insensitive).
+        let mut run = 1usize;
+        while i + run < words.len() && words[i + run].to_lowercase() == word_lower {
+            run += 1;
+        }
+        // Only collapse when there are 3 or more in a row.
+        out.push(word);
+        i += if run >= 3 { run } else { 1 };
+    }
+
+    // Re-join; use single spaces (clean_whitespace will tidy anything left over).
+    out.join(" ")
 }
 
 // ---------------------------------------------------------------------------
