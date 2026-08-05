@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
 import { ShowOverlay } from "../ShowOverlay";
 import { ModelUnloadTimeoutSetting } from "../ModelUnloadTimeout";
 import { CustomWords } from "../CustomWords";
@@ -32,46 +33,43 @@ const VocabTermsInline: React.FC = React.memo(() => {
   const [terms, setTerms] = useState<VocabTerm[]>([]);
   const [newTerm, setNewTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const cmd = (window.__TAURI_INVOKE__ as any) ? (globalThis as any).__TAURI__?.invoke : null;
-    const invoke = (window as any).__TAURI_INVOKE__;
-    if (!invoke) return;
     try {
-      const result: VocabTerm[] = await invoke("vocab_list_terms");
+      const result = await invoke<VocabTerm[]>("vocab_list_terms");
       setTerms(result ?? []);
-      setReady(true);
-    } catch { setReady(true); }
+    } catch (e) {
+      // Command not yet registered (bindings not regenerated) — silent fail
+      setError(String(e));
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const add = async () => {
-    const t = newTerm.trim();
-    if (!t || t.length < 2) return;
+    const trimmed = newTerm.trim();
+    if (trimmed.length < 2) return;
     setLoading(true);
     try {
-      const result: VocabTerm = await (window as any).__TAURI_INVOKE__("vocab_add_term", { term: t });
+      const result = await invoke<VocabTerm>("vocab_add_term", { term: trimmed });
       setTerms(prev => [result, ...prev]);
       setNewTerm("");
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("vocab_add_term:", e); }
     finally { setLoading(false); }
   };
 
   const remove = async (id: number) => {
     try {
-      await (window as any).__TAURI_INVOKE__("vocab_delete_term", { id });
+      await invoke("vocab_delete_term", { id });
       setTerms(prev => prev.filter(t => t.id !== id));
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("vocab_delete_term:", e); }
   };
-
-  if (!ready) return null;
 
   return (
     <SettingContainer
       title="Learned Vocabulary"
-      description="Terms auto-learned from your edits or added manually. Injected into Whisper's prompt to improve recognition."
+      description="Terms auto-learned from your edits or added manually. Injected into Whisper's prompt to improve recognition of names and technical terms."
       descriptionMode="tooltip"
       grouped
       layout="stacked"
@@ -91,22 +89,23 @@ const VocabTermsInline: React.FC = React.memo(() => {
             + Add
           </Button>
         </div>
-        {terms.length > 0 && (
+        {error ? (
+          <p className="text-xs text-mid-gray/50">Vocabulary requires a restart to activate.</p>
+        ) : terms.filter(t => !t.suppressed).length > 0 ? (
           <div className="flex flex-wrap gap-1 pt-1">
             {terms.filter(t => !t.suppressed).map(t => (
               <Button key={t.id} onClick={() => remove(t.id)} variant="secondary" size="sm"
                 className="inline-flex items-center gap-1">
                 <span className="font-mono text-xs">{t.term}</span>
-                {t.source !== "manual" && <span className="text-xs opacity-50">auto</span>}
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {t.source !== "manual" && <span className="text-xs opacity-50 ml-1">auto</span>}
+                <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </Button>
             ))}
           </div>
-        )}
-        {terms.length === 0 && (
-          <p className="text-xs text-mid-gray/70">No vocabulary terms yet. They appear here after Whisper learns from your repeated corrections.</p>
+        ) : (
+          <p className="text-xs text-mid-gray/70">No terms yet. Add manually or they appear automatically after Whisper learns from your repeated corrections.</p>
         )}
       </div>
     </SettingContainer>
