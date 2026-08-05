@@ -166,6 +166,21 @@ const settingUpdaters: {
     commands.changeTranscribeGpuDevice(value as number),
   extra_recording_buffer_ms: (value) =>
     commands.changeExtraRecordingBufferSetting(value as number),
+  // Phase 1 post-processing pipeline toggles
+  // camelCase matches specta-generated names: change_x_setting -> changeXSetting
+  remove_fillers_enabled: (value) =>
+    (commands as any).changeRemoveFillersEnabledSetting(value as boolean),
+  remove_false_starts_enabled: (value) =>
+    (commands as any).changeRemoveFalseStartsEnabledSetting(value as boolean),
+  auto_punctuation_enabled: (value) =>
+    (commands as any).changeAutoPunctuationEnabledSetting(value as boolean),
+  bullet_points_enabled: (value) =>
+    (commands as any).changeBulletPointsEnabledSetting(value as boolean),
+  // Phase 2
+  itn_enabled: (value) =>
+    (commands as any).changeItnEnabledSetting(value as boolean),
+  vocab_learning_enabled: (value) =>
+    (commands as any).changeVocabLearningEnabledSetting(value as boolean),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

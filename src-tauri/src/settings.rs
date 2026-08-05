@@ -752,6 +752,7 @@ fn default_transcribe_gpu_device() -> i32 {
     -1 // auto
 }
 
+#[allow(dead_code)]
 fn default_learning_threshold() -> i64 { 2 }
 
 fn default_vocab_learning_enabled() -> bool { true }
