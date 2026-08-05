@@ -1,11 +1,30 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
 import { commands } from "@/bindings";
-import type { VocabTerm, CorrectionEntry } from "@/bindings";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 import { Textarea } from "../ui/Textarea";
 import { SettingsGroup } from "../ui/SettingsGroup";
+
+// Inline types — avoids dependency on bindings.ts which is regenerated on build
+interface VocabTerm {
+  id: number;
+  term: string;
+  term_lower: string;
+  source: string;
+  weight: number;
+  sightings: number;
+  suppressed: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+interface CorrectionEntry {
+  id: number;
+  original_span: string;
+  corrected_span: string;
+  times_seen: number;
+  last_seen_at: number;
+}
 
 type Tab = "terms" | "corrections";
 
@@ -26,9 +45,11 @@ export const VocabularyManager: React.FC = React.memo(() => {
   const loadTerms = useCallback(async () => {
     setTermsLoading(true);
     try {
-      setTerms(await commands.vocabListTerms());
+      const result = await (commands as any).vocabListTerms();
+      setTerms(result ?? []);
     } catch (e) {
-      toast.error(`Failed to load terms: ${e}`);
+      console.error("Failed to load vocab terms:", e);
+      setTerms([]);
     } finally {
       setTermsLoading(false);
     }
@@ -38,10 +59,13 @@ export const VocabularyManager: React.FC = React.memo(() => {
     if (correctionsLoaded) return;
     setCorrectionsLoading(true);
     try {
-      setCorrections(await commands.vocabListCorrections(null));
+      const result = await (commands as any).vocabListCorrections(null);
+      setCorrections(result ?? []);
       setCorrectionsLoaded(true);
     } catch (e) {
-      toast.error(`Failed to load corrections: ${e}`);
+      console.error("Failed to load corrections:", e);
+      setCorrections([]);
+      setCorrectionsLoaded(true);
     } finally {
       setCorrectionsLoading(false);
     }
@@ -55,11 +79,12 @@ export const VocabularyManager: React.FC = React.memo(() => {
     if (!trimmed) return;
     setAddingTerm(true);
     try {
-      const added = await commands.vocabAddTerm(trimmed);
+      const added = await (commands as any).vocabAddTerm(trimmed);
       setTerms((prev) => [added, ...prev]);
       setNewTerm("");
     } catch (e) {
-      toast.error(`Failed to add term: ${e}`);
+      console.error("Failed to add term:", e);
+      alert(`Failed to add term: ${e}`);
     } finally {
       setAddingTerm(false);
     }
@@ -67,19 +92,19 @@ export const VocabularyManager: React.FC = React.memo(() => {
 
   const handleSuppress = async (id: number) => {
     try {
-      await commands.vocabSuppressTerm(id);
+      await (commands as any).vocabSuppressTerm(id);
       setTerms((prev) => prev.map((t) => t.id === id ? { ...t, suppressed: true } : t));
     } catch (e) {
-      toast.error(`Failed to suppress: ${e}`);
+      console.error("Failed to suppress:", e);
     }
   };
 
   const handleDelete = async (id: number) => {
     try {
-      await commands.vocabDeleteTerm(id);
+      await (commands as any).vocabDeleteTerm(id);
       setTerms((prev) => prev.filter((t) => t.id !== id));
     } catch (e) {
-      toast.error(`Failed to delete: ${e}`);
+      console.error("Failed to delete:", e);
     }
   };
 
@@ -88,13 +113,14 @@ export const VocabularyManager: React.FC = React.memo(() => {
     if (!lines.length) return;
     setImporting(true);
     try {
-      const count = await commands.vocabImportTerms(lines);
-      toast.success(`Imported ${count} term${count !== 1 ? "s" : ""}`);
+      const count = await (commands as any).vocabImportTerms(lines);
       setImportText("");
       setShowImport(false);
       await loadTerms();
+      alert(`Imported ${count} term${count !== 1 ? "s" : ""}`);
     } catch (e) {
-      toast.error(`Import failed: ${e}`);
+      console.error("Import failed:", e);
+      alert(`Import failed: ${e}`);
     } finally {
       setImporting(false);
     }
@@ -105,7 +131,7 @@ export const VocabularyManager: React.FC = React.memo(() => {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-3xl w-full mx-auto space-y-4">
       <div className="flex gap-1 border-b border-mid-gray/20">
         {(["terms", "corrections"] as Tab[]).map((tab) => (
           <button
@@ -238,9 +264,9 @@ const TermRow: React.FC<TermRowProps> = React.memo(({ term, onSuppress, onDelete
 
 const CorrectionRow: React.FC<{ entry: CorrectionEntry }> = React.memo(({ entry }) => (
   <div className="flex items-center gap-2 px-4 py-2 text-sm">
-    <span className="font-mono text-mid-gray">{entry.original}</span>
+    <span className="font-mono text-mid-gray">{entry.original_span}</span>
     <span className="text-mid-gray">→</span>
-    <span className="font-mono">{entry.corrected}</span>
+    <span className="font-mono">{entry.corrected_span}</span>
     <span className="ml-auto text-xs text-mid-gray">×{entry.times_seen}</span>
   </div>
 ));
