@@ -21,6 +21,8 @@ import { ModelSelect } from "../PostProcessingSettingsApi/ModelSelect";
 import { usePostProcessProviderState } from "../PostProcessingSettingsApi/usePostProcessProviderState";
 import { ShortcutInput } from "../ShortcutInput";
 import { useSettings } from "../../../hooks/useSettings";
+import { FillerRemovalSettings } from "./FillerRemovalSettings";
+import { SmartPunctuationSettings } from "./SmartPunctuationSettings";
 
 const PostProcessingSettingsApiComponent: React.FC = () => {
   const { t } = useTranslation();
@@ -443,6 +445,14 @@ export const PostProcessingSettings: React.FC = () => {
 
       <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
         <PostProcessingSettingsPrompts />
+      </SettingsGroup>
+
+      <SettingsGroup title="Text Cleanup">
+        <FillerRemovalSettings />
+      </SettingsGroup>
+
+      <SettingsGroup title="Punctuation &amp; Formatting">
+        <SmartPunctuationSettings />
       </SettingsGroup>
     </div>
   );

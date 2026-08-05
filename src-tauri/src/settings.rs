@@ -469,6 +469,23 @@ pub struct AppSettings {
     /// `overlay_position` (position `none` → style `None`).
     #[serde(default = "default_overlay_style")]
     pub overlay_style: OverlayStyle,
+
+    // ── Post-processing pipeline toggles (Phase 1) ──────────────────────────
+    /// Enable enhanced filler removal (stutter collapse + correction cues).
+    #[serde(default)]
+    pub remove_fillers_enabled: bool,
+
+    /// Enable false-start and correction-cue removal.
+    #[serde(default)]
+    pub remove_false_starts_enabled: bool,
+
+    /// Enable pause-driven punctuation, spoken commands, and question inference.
+    #[serde(default)]
+    pub auto_punctuation_enabled: bool,
+
+    /// Enable bullet point formatting from spoken 'bullet point' commands.
+    #[serde(default)]
+    pub bullet_points_enabled: bool,
 }
 
 fn default_model() -> String {
@@ -726,6 +743,8 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
 fn default_transcribe_gpu_device() -> i32 {
     -1 // auto
 }
+
+fn default_learning_threshold() -> i64 { 2 }
 
 fn default_typing_tool() -> TypingTool {
     TypingTool::Auto

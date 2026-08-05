@@ -14,6 +14,7 @@ mod llm_client;
 mod managers;
 mod overlay;
 mod paste_tx;
+mod post_process;
 pub mod portable;
 mod secure_input;
 mod settings;
@@ -640,6 +641,10 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_append_trailing_space_setting,
             shortcut::change_lazy_stream_close_setting,
             shortcut::change_vad_enabled_setting,
+            shortcut::change_remove_fillers_enabled_setting,
+            shortcut::change_remove_false_starts_enabled_setting,
+            shortcut::change_auto_punctuation_enabled_setting,
+            shortcut::change_bullet_points_enabled_setting,
             shortcut::change_app_language_setting,
             shortcut::change_update_checks_setting,
             shortcut::change_show_whats_new_on_update_setting,

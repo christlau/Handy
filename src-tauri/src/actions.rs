@@ -435,6 +435,24 @@ pub(crate) async fn process_transcription_output(
         final_text = converted_text;
     }
 
+    // Apply deterministic post-processing pipeline (Phase 1: filler removal,
+    // punctuation, question inference). Token timings not yet threaded through;
+    // timing-gated stages (pause segmentation) are gracefully skipped.
+    {
+        let pp_config = crate::post_process::PostProcessConfig {
+            remove_fillers_enabled: settings.remove_fillers_enabled,
+            remove_false_starts_enabled: settings.remove_false_starts_enabled,
+            auto_punctuation_enabled: settings.auto_punctuation_enabled,
+            bullet_points_enabled: settings.bullet_points_enabled,
+            app_language: settings.app_language.clone(),
+        };
+        let result = crate::post_process::apply_pipeline(&final_text, &pp_config, &[]);
+        if !result.changed_stages.is_empty() {
+            debug!("post_process pipeline changed stages: {:?}", result.changed_stages);
+        }
+        final_text = result.text;
+    }
+
     if post_process {
         if let Some(processed_text) = post_process_transcription(&settings, &final_text).await {
             post_processed_text = Some(processed_text.clone());
