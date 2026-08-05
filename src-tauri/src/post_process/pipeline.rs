@@ -10,6 +10,7 @@ pub struct PostProcessConfig {
     pub remove_false_starts_enabled: bool,
     pub auto_punctuation_enabled: bool,
     pub bullet_points_enabled: bool,
+    pub itn_enabled: bool,
     pub app_language: String,
 }
 
@@ -20,6 +21,7 @@ impl Default for PostProcessConfig {
             remove_false_starts_enabled: false,
             auto_punctuation_enabled: false,
             bullet_points_enabled: false,
+            itn_enabled: false,
             app_language: "en".to_string(),
         }
     }
@@ -68,6 +70,13 @@ pub fn apply_pipeline(
         let remove_false_starts = config.remove_false_starts_enabled;
         run_stage("filler_removal", &mut text, &mut changed, move |t| {
             filler::process(t, remove_fillers, remove_false_starts)
+        });
+    }
+
+    // Stage: ITN — convert number words to digits
+    if config.itn_enabled {
+        run_stage("itn", &mut text, &mut changed, |t| {
+            crate::post_process::itn::process(t, &crate::post_process::itn::ItnConfig::default())
         });
     }
 
@@ -131,6 +140,7 @@ mod tests {
             remove_false_starts_enabled: false,
             auto_punctuation_enabled: true,
             bullet_points_enabled: false,
+            itn_enabled: false,
             app_language: "en".to_string(),
         }
     }
@@ -163,6 +173,7 @@ mod tests {
             remove_false_starts_enabled: false,
             auto_punctuation_enabled: false,
             bullet_points_enabled: false,
+            itn_enabled: false,
             app_language: "en".to_string(),
         };
         let input = "um hello world";

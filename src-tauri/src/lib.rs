@@ -168,6 +168,11 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     let history_manager =
         Arc::new(HistoryManager::new(app_handle).expect("Failed to initialize history manager"));
 
+    // Run vocabulary maintenance (weight decay, prune old corrections)
+    if let Ok(conn) = crate::managers::vocab::open_db(app_handle) {
+        let _ = crate::managers::vocab::startup_maintenance(&conn);
+    }
+
     // Initialize the transcribe-cpp native backend (logging + backend module
     // registration) once, before any whisper model is loaded.
     managers::transcription::init_transcribe_backend();
@@ -645,6 +650,15 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_remove_false_starts_enabled_setting,
             shortcut::change_auto_punctuation_enabled_setting,
             shortcut::change_bullet_points_enabled_setting,
+            shortcut::change_itn_enabled_setting,
+            shortcut::change_vocab_learning_enabled_setting,
+            commands::vocab::vocab_list_terms,
+            commands::vocab::vocab_add_term,
+            commands::vocab::vocab_suppress_term,
+            commands::vocab::vocab_delete_term,
+            commands::vocab::vocab_list_corrections,
+            commands::vocab::vocab_import_terms,
+            commands::vocab::vocab_get_boost_terms,
             shortcut::change_app_language_setting,
             shortcut::change_update_checks_setting,
             shortcut::change_show_whats_new_on_update_setting,
@@ -710,6 +724,7 @@ pub fn run(cli_args: CliArgs) {
             commands::history::retry_history_entry_transcription,
             commands::history::update_history_limit,
             commands::history::update_recording_retention_period,
+            commands::history::update_history_entry_text,
             helpers::clamshell::is_laptop,
         ])
         .events(collect_events![

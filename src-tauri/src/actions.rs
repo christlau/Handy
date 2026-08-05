@@ -444,6 +444,7 @@ pub(crate) async fn process_transcription_output(
             remove_false_starts_enabled: settings.remove_false_starts_enabled,
             auto_punctuation_enabled: settings.auto_punctuation_enabled,
             bullet_points_enabled: settings.bullet_points_enabled,
+            itn_enabled: settings.itn_enabled,
             app_language: settings.app_language.clone(),
         };
         let result = crate::post_process::apply_pipeline(&final_text, &pp_config, &[]);

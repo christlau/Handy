@@ -152,3 +152,45 @@ pub async fn update_recording_retention_period(
 
     Ok(())
 }
+
+#[tauri::command]
+#[specta::specta]
+pub async fn update_history_entry_text(
+    app: AppHandle,
+    history_manager: State<'_, Arc<HistoryManager>>,
+    id: i64,
+    new_text: String,
+) -> Result<(), String> {
+    // Get the original text for diffing
+    let entry = history_manager
+        .get_entry_by_id(id)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Entry {} not found", id))?;
+
+    // Update the text in DB
+    history_manager
+        .update_transcription(id, new_text.clone(), None, None)
+        .map_err(|e| e.to_string())?;
+
+    // Run vocabulary learning if enabled
+    let settings = crate::settings::get_settings(&app);
+    if settings.vocab_learning_enabled {
+        let edit = crate::managers::vocab::TranscriptionEdit {
+            history_entry_id: id,
+            original_text: entry.transcription_text.clone(),
+            edited_text: new_text,
+        };
+        if let Ok(conn) = crate::managers::vocab::open_db(&app) {
+            match crate::managers::vocab::process_edit(&conn, &edit) {
+                Ok(promoted) if !promoted.is_empty() => {
+                    log::info!("vocab: promoted {} new terms: {:?}", promoted.len(), promoted);
+                }
+                Err(e) => log::warn!("vocab process_edit failed: {}", e),
+                _ => {}
+            }
+        }
+    }
+
+    Ok(())
+}

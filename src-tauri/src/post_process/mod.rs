@@ -4,6 +4,7 @@
 
 pub mod common;
 pub mod grammar_sets;
+pub mod itn;
 mod special_tokens;
 mod filler;
 mod pause_segment;

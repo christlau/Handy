@@ -486,6 +486,14 @@ pub struct AppSettings {
     /// Enable bullet point formatting from spoken 'bullet point' commands.
     #[serde(default)]
     pub bullet_points_enabled: bool,
+
+    /// Enable ITN (Inverse Text Normalization) — convert spoken number words to digits.
+    #[serde(default)]
+    pub itn_enabled: bool,
+
+    /// Enable automatic vocabulary learning from user edits to history entries.
+    #[serde(default = "default_vocab_learning_enabled")]
+    pub vocab_learning_enabled: bool,
 }
 
 fn default_model() -> String {
@@ -746,6 +754,8 @@ fn default_transcribe_gpu_device() -> i32 {
 
 fn default_learning_threshold() -> i64 { 2 }
 
+fn default_vocab_learning_enabled() -> bool { true }
+
 fn default_typing_tool() -> TypingTool {
     TypingTool::Auto
 }
@@ -923,6 +933,8 @@ pub fn get_default_settings() -> AppSettings {
         remove_false_starts_enabled: false,
         auto_punctuation_enabled: false,
         bullet_points_enabled: false,
+        itn_enabled: false,
+        vocab_learning_enabled: true,
     }
 }
 

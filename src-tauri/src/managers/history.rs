@@ -31,6 +31,37 @@ static MIGRATIONS: &[M] = &[
     M::up("ALTER TABLE transcription_history ADD COLUMN post_processed_text TEXT;"),
     M::up("ALTER TABLE transcription_history ADD COLUMN post_process_prompt TEXT;"),
     M::up("ALTER TABLE transcription_history ADD COLUMN post_process_requested BOOLEAN NOT NULL DEFAULT 0;"),
+    M::up(
+        "CREATE TABLE IF NOT EXISTS vocab_terms (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            term        TEXT NOT NULL,
+            term_lower  TEXT NOT NULL,
+            source      TEXT NOT NULL DEFAULT 'manual',
+            weight      REAL NOT NULL DEFAULT 1.0,
+            sightings   INTEGER NOT NULL DEFAULT 0,
+            suppressed  INTEGER NOT NULL DEFAULT 0,
+            created_at  INTEGER NOT NULL,
+            updated_at  INTEGER NOT NULL,
+            UNIQUE(term_lower)
+        );
+        CREATE INDEX IF NOT EXISTS idx_vocab_terms_weight ON vocab_terms(weight DESC);
+        CREATE INDEX IF NOT EXISTS idx_vocab_terms_suppressed ON vocab_terms(suppressed);",
+    ),
+    M::up(
+        "CREATE TABLE IF NOT EXISTS correction_log (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            original_span    TEXT NOT NULL,
+            original_lower   TEXT NOT NULL,
+            corrected_span   TEXT NOT NULL,
+            corrected_lower  TEXT NOT NULL,
+            history_entry_id INTEGER REFERENCES transcription_history(id) ON DELETE SET NULL,
+            times_seen       INTEGER NOT NULL DEFAULT 1,
+            last_seen_at     INTEGER NOT NULL,
+            created_at       INTEGER NOT NULL,
+            UNIQUE(original_lower)
+        );
+        CREATE INDEX IF NOT EXISTS idx_correction_log_original ON correction_log(original_lower);",
+    ),
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
