@@ -62,6 +62,38 @@ static MIGRATIONS: &[M] = &[
         );
         CREATE INDEX IF NOT EXISTS idx_correction_log_original ON correction_log(original_lower);",
     ),
+    // Migration 7: Journal — virtual FTS5 table over transcription_history for
+    // full-text search, plus a journal_days view for the daily timeline.
+    M::up(
+        "CREATE TABLE IF NOT EXISTS journal_days (
+            date_str    TEXT PRIMARY KEY,   -- ISO date 'YYYY-MM-DD' in local time
+            entry_count INTEGER NOT NULL DEFAULT 0,
+            word_count  INTEGER NOT NULL DEFAULT 0,
+            first_ts    INTEGER NOT NULL,   -- unix timestamp of earliest entry that day
+            last_ts     INTEGER NOT NULL    -- unix timestamp of latest entry that day
+        );
+        CREATE INDEX IF NOT EXISTS idx_journal_days_first ON journal_days(first_ts DESC);
+        CREATE VIRTUAL TABLE IF NOT EXISTS journal_fts USING fts5(
+            transcription_text,
+            content=transcription_history,
+            content_rowid=id
+        );
+        -- Triggers to keep FTS index in sync
+        CREATE TRIGGER IF NOT EXISTS journal_fts_ai AFTER INSERT ON transcription_history BEGIN
+            INSERT INTO journal_fts(rowid, transcription_text)
+                VALUES (new.id, new.transcription_text);
+        END;
+        CREATE TRIGGER IF NOT EXISTS journal_fts_ad AFTER DELETE ON transcription_history BEGIN
+            INSERT INTO journal_fts(journal_fts, rowid, transcription_text)
+                VALUES ('delete', old.id, old.transcription_text);
+        END;
+        CREATE TRIGGER IF NOT EXISTS journal_fts_au AFTER UPDATE ON transcription_history BEGIN
+            INSERT INTO journal_fts(journal_fts, rowid, transcription_text)
+                VALUES ('delete', old.id, old.transcription_text);
+            INSERT INTO journal_fts(rowid, transcription_text)
+                VALUES (new.id, new.transcription_text);
+        END;",
+    ),
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]

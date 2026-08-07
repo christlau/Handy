@@ -651,6 +651,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_auto_punctuation_enabled_setting,
             shortcut::change_bullet_points_enabled_setting,
             shortcut::change_itn_enabled_setting,
+            shortcut::change_fragmented_word_repair_enabled_setting,
             shortcut::change_vocab_learning_enabled_setting,
             commands::vocab::vocab_list_terms,
             commands::vocab::vocab_add_term,
@@ -726,6 +727,9 @@ pub fn run(cli_args: CliArgs) {
             commands::history::update_recording_retention_period,
             commands::history::update_history_entry_text,
             helpers::clamshell::is_laptop,
+            commands::journal::list_journal_days,
+            commands::journal::get_journal_day,
+            commands::journal::search_journal,
         ])
         .events(collect_events![
             managers::history::HistoryUpdatePayload,

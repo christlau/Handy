@@ -13,6 +13,7 @@ import {
 import { Button } from "../../ui/Button";
 import { ResetButton } from "../../ui/ResetButton";
 import { Input } from "../../ui/Input";
+import { ToggleSwitch } from "../../ui/ToggleSwitch";
 
 import { ProviderSelect } from "../PostProcessingSettingsApi/ProviderSelect";
 import { BaseUrlField } from "../PostProcessingSettingsApi/BaseUrlField";
@@ -428,6 +429,8 @@ PostProcessingSettingsPrompts.displayName = "PostProcessingSettingsPrompts";
 
 export const PostProcessingSettings: React.FC = () => {
   const { t } = useTranslation();
+  const { getSetting, updateSetting, isUpdating } = useSettings();
+  const fragWordRepairEnabled = getSetting("fragmented_word_repair_enabled") ?? false;
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
@@ -449,6 +452,15 @@ export const PostProcessingSettings: React.FC = () => {
 
       <SettingsGroup title="Text Cleanup">
         <FillerRemovalSettings />
+        <ToggleSwitch
+          checked={fragWordRepairEnabled}
+          onChange={(v) => updateSetting("fragmented_word_repair_enabled", v)}
+          isUpdating={isUpdating("fragmented_word_repair_enabled")}
+          label="Fragmented word repair"
+          description='Fuses ASR-split tokens like "im ple men ta tion" → "implementation". Best for long technical words.'
+          descriptionMode="tooltip"
+          grouped={true}
+        />
       </SettingsGroup>
 
       <SettingsGroup title="Punctuation &amp; Formatting">

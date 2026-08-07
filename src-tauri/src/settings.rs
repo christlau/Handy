@@ -491,6 +491,10 @@ pub struct AppSettings {
     #[serde(default)]
     pub itn_enabled: bool,
 
+    /// Enable fragmented word repair — fuse ASR-split tokens like "im ple men ta tion" → "implementation".
+    #[serde(default)]
+    pub fragmented_word_repair_enabled: bool,
+
     /// Enable automatic vocabulary learning from user edits to history entries.
     #[serde(default = "default_vocab_learning_enabled")]
     pub vocab_learning_enabled: bool,
@@ -935,6 +939,7 @@ pub fn get_default_settings() -> AppSettings {
         auto_punctuation_enabled: false,
         bullet_points_enabled: false,
         itn_enabled: false,
+        fragmented_word_repair_enabled: false,
         vocab_learning_enabled: true,
     }
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Cog, FlaskConical, History, Info, Sparkles, Cpu } from "lucide-react";
+import { BookOpen, Cog, FlaskConical, History, Info, Sparkles, Cpu } from "lucide-react";
 import HandyTextLogo from "./icons/HandyTextLogo";
 import HandyHand from "./icons/HandyHand";
 import { useSettings } from "../hooks/useSettings";
@@ -13,6 +13,7 @@ import {
   PostProcessingSettings,
   ModelsSettings,
 } from "./settings";
+import { JournalView } from "./JournalView";
 
 export type SidebarSection = keyof typeof SECTIONS_CONFIG;
 
@@ -29,6 +30,7 @@ interface SectionConfig {
   icon: React.ComponentType<IconProps>;
   component: React.ComponentType;
   enabled: (settings: any) => boolean;
+  fullHeight?: boolean;
 }
 
 export const SECTIONS_CONFIG = {
@@ -43,6 +45,13 @@ export const SECTIONS_CONFIG = {
     icon: History,
     component: HistorySettings,
     enabled: () => true,
+  },
+  journal: {
+    labelKey: "sidebar.journal",
+    icon: BookOpen,
+    component: JournalView,
+    enabled: () => true,
+    fullHeight: true,
   },
   models: {
     labelKey: "sidebar.models",

@@ -1,7 +1,7 @@
 // src-tauri/src/post_process/pipeline.rs
 
 use super::common::TokenTiming;
-use super::{filler, pause_segment, punctuation, question_inference, special_tokens};
+use super::{filler, fragmented_word_repair, pause_segment, punctuation, question_inference, special_tokens};
 use log::warn;
 
 #[derive(Clone, Debug)]
@@ -11,6 +11,7 @@ pub struct PostProcessConfig {
     pub auto_punctuation_enabled: bool,
     pub bullet_points_enabled: bool,
     pub itn_enabled: bool,
+    pub fragmented_word_repair_enabled: bool,
     pub app_language: String,
 }
 
@@ -22,6 +23,7 @@ impl Default for PostProcessConfig {
             auto_punctuation_enabled: false,
             bullet_points_enabled: false,
             itn_enabled: false,
+            fragmented_word_repair_enabled: false,
             app_language: "en".to_string(),
         }
     }
@@ -55,6 +57,14 @@ pub fn apply_pipeline(
     run_stage("special_tokens", &mut text, &mut changed, |t| {
         special_tokens::strip(t)
     });
+
+    // Stage 1b: fragmented word repair — fuse ASR-split tokens before any
+    // other processing (e.g. "im ple ment ation" -> "implementation")
+    if config.fragmented_word_repair_enabled {
+        run_stage("fragmented_word_repair", &mut text, &mut changed, |t| {
+            fragmented_word_repair::repair(t)
+        });
+    }
 
     // Stage 2: pause-driven segmentation (requires token timings)
     if config.auto_punctuation_enabled && !token_timings.is_empty() {

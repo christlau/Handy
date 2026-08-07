@@ -1321,6 +1321,18 @@ pub fn change_itn_enabled_setting(
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_fragmented_word_repair_enabled_setting(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.fragmented_word_repair_enabled = enabled;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_vocab_learning_enabled_setting(
     app: AppHandle,
     enabled: bool,
