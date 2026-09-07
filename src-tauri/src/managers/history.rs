@@ -62,6 +62,11 @@ static MIGRATIONS: &[M] = &[
         );
         CREATE INDEX IF NOT EXISTS idx_correction_log_original ON correction_log(original_lower);",
     ),
+    // Migrations 7+8 were journal/FTS5 tables that have been removed.
+    // These no-ops preserve the version counter for existing databases
+    // that already ran the original migrations.
+    M::up("SELECT 1;"),
+    M::up("SELECT 1;"),
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
