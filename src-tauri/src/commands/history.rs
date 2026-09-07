@@ -194,3 +194,31 @@ pub async fn update_history_entry_text(
 
     Ok(())
 }
+
+/// Delete all WAV files in the recordings folder that are not referenced by
+/// a saved history entry. Also deletes all non-saved history entries.
+/// Returns the number of files deleted.
+#[tauri::command]
+#[specta::specta]
+pub async fn clear_all_recordings(
+    _app: AppHandle,
+    history_manager: State<'_, Arc<HistoryManager>>,
+) -> Result<u32, String> {
+    history_manager
+        .clear_all_recordings()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Returns the total size of the recordings folder in bytes.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_recordings_size(
+    _app: AppHandle,
+    history_manager: State<'_, Arc<HistoryManager>>,
+) -> Result<u64, String> {
+    history_manager
+        .get_recordings_size()
+        .await
+        .map_err(|e| e.to_string())
+}

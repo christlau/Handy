@@ -678,6 +678,86 @@ impl HistoryManager {
             format!("Recording {}", timestamp)
         }
     }
+
+    /// Delete all non-saved history entries and their WAV files.
+    /// Saved entries (starred) and their recordings are preserved.
+    /// Returns number of files deleted.
+    pub async fn clear_all_recordings(&self) -> Result<u32> {
+        let conn = self.get_connection()?;
+
+        // Get all non-saved entries
+        let mut stmt = conn.prepare(
+            "SELECT id, file_name FROM transcription_history WHERE saved = 0",
+        )?;
+        let entries: Vec<(i64, String)> = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+
+        let mut deleted_files: u32 = 0;
+
+        for (id, file_name) in &entries {
+            // Delete WAV file
+            let file_path = self.recordings_dir.join(file_name);
+            if file_path.exists() {
+                if let Err(e) = fs::remove_file(&file_path) {
+                    error!("clear_all_recordings: failed to delete {}: {}", file_name, e);
+                } else {
+                    deleted_files += 1;
+                }
+            }
+
+            // Delete DB row
+            conn.execute(
+                "DELETE FROM transcription_history WHERE id = ?1",
+                params![id],
+            )?;
+
+            if let Err(e) = (HistoryUpdatePayload::Deleted { id: *id }).emit(&self.app_handle) {
+                error!("Failed to emit history-updated event: {}", e);
+            }
+        }
+
+        // Also delete any orphaned WAV files not referenced in the DB
+        if let Ok(read_dir) = fs::read_dir(&self.recordings_dir) {
+            let saved_files: std::collections::HashSet<String> = {
+                let mut stmt2 = conn.prepare(
+                    "SELECT file_name FROM transcription_history WHERE saved = 1",
+                )?;
+                stmt2
+                    .query_map([], |row| row.get::<_, String>(0))?
+                    .collect::<rusqlite::Result<_>>()?
+            };
+
+            for entry in read_dir.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.ends_with(".wav") && !saved_files.contains(&name) {
+                    if let Err(e) = fs::remove_file(entry.path()) {
+                        error!("clear_all_recordings: failed to delete orphan {}: {}", name, e);
+                    } else {
+                        deleted_files += 1;
+                    }
+                }
+            }
+        }
+
+        info!("clear_all_recordings: deleted {} file(s)", deleted_files);
+        Ok(deleted_files)
+    }
+
+    /// Returns total size of all WAV files in the recordings folder in bytes.
+    pub async fn get_recordings_size(&self) -> Result<u64> {
+        let mut total: u64 = 0;
+        if let Ok(read_dir) = fs::read_dir(&self.recordings_dir) {
+            for entry in read_dir.flatten() {
+                if entry.file_name().to_string_lossy().ends_with(".wav") {
+                    if let Ok(meta) = entry.metadata() {
+                        total += meta.len();
+                    }
+                }
+            }
+        }
+        Ok(total)
+    }
 }
 
 #[cfg(test)]

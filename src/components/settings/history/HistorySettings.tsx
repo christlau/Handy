@@ -68,6 +68,8 @@ export const HistorySettings: React.FC = () => {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const entriesRef = useRef<HistoryEntry[]>([]);
   const loadingRef = useRef(false);
+  const [recordingsSize, setRecordingsSize] = useState<number | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   // Keep ref in sync for use in IntersectionObserver callback
   useEffect(() => {
@@ -234,6 +236,39 @@ export const HistorySettings: React.FC = () => {
     }
   };
 
+  const loadRecordingsSize = useCallback(async () => {
+    try {
+      const result = await (commands as any).getRecordingsSize();
+      if (result?.status === "ok") setRecordingsSize(result.data as number);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => { loadRecordingsSize(); }, [loadRecordingsSize]);
+
+  const clearAllRecordings = async () => {
+    if (!window.confirm("Delete all unsaved recordings and history entries? Starred entries are kept.")) return;
+    setClearing(true);
+    try {
+      const result = await (commands as any).clearAllRecordings();
+      if (result?.status === "ok") {
+        toast.success(`Cleared ${result.data} recording${result.data === 1 ? "" : "s"}`);
+        loadPage();
+        loadRecordingsSize();
+      }
+    } catch (e) {
+      toast.error("Failed to clear recordings");
+      console.error(e);
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  const formatSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   let content: React.ReactNode;
 
   if (loading) {
@@ -280,11 +315,29 @@ export const HistorySettings: React.FC = () => {
             <h2 className="text-xs font-medium text-mid-gray uppercase tracking-wide">
               {t("settings.history.title")}
             </h2>
+            {recordingsSize !== null && recordingsSize > 0 && (
+              <p className="text-xs text-mid-gray/60 mt-0.5">
+                {formatSize(recordingsSize)} in recordings
+              </p>
+            )}
           </div>
-          <OpenRecordingsButton
-            onClick={openRecordingsFolder}
-            label={t("settings.history.openFolder")}
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={clearAllRecordings}
+              disabled={clearing || entries.length === 0}
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+              title="Delete all unsaved recordings (keeps starred)"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>{clearing ? "Clearing…" : "Clear All"}</span>
+            </Button>
+            <OpenRecordingsButton
+              onClick={openRecordingsFolder}
+              label={t("settings.history.openFolder")}
+            />
+          </div>
         </div>
         <div className="bg-background border border-mid-gray/20 rounded-lg overflow-visible">
           {content}
