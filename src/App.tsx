@@ -28,10 +28,6 @@ const renderSettingsContent = (section: SidebarSection) => {
   return <ActiveComponent />;
 };
 
-const isSectionFullHeight = (section: SidebarSection): boolean => {
-  return (SECTIONS_CONFIG[section] as any)?.fullHeight === true;
-};
-
 function App() {
   const { t, i18n } = useTranslation();
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep | null>(
@@ -306,20 +302,13 @@ function App() {
           />
           {/* Scrollable content area */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {isSectionFullHeight(currentSection) ? (
-              // Full-height sections (e.g. Journal) manage their own scroll
-              <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              <div className="flex flex-col items-center p-4 gap-4">
+                <AccessibilityPermissions />
+                <SecureInputWarning />
                 {renderSettingsContent(currentSection)}
               </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto">
-                <div className="flex flex-col items-center p-4 gap-4">
-                  <AccessibilityPermissions />
-                  <SecureInputWarning />
-                  {renderSettingsContent(currentSection)}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
         {/* Fixed footer at bottom */}

@@ -727,9 +727,6 @@ pub fn run(cli_args: CliArgs) {
             commands::history::update_recording_retention_period,
             commands::history::update_history_entry_text,
             helpers::clamshell::is_laptop,
-            commands::journal::list_journal_days,
-            commands::journal::get_journal_day,
-            commands::journal::search_journal,
         ])
         .events(collect_events![
             managers::history::HistoryUpdatePayload,

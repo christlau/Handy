@@ -62,42 +62,6 @@ static MIGRATIONS: &[M] = &[
         );
         CREATE INDEX IF NOT EXISTS idx_correction_log_original ON correction_log(original_lower);",
     ),
-    // Migration 7: Journal — journal_days summary table for the daily timeline,
-    // and an FTS5 virtual table for full-text search (requires bundled-full).
-    // The triggers keep the FTS index in sync with transcription_history.
-    M::up(
-        "CREATE TABLE IF NOT EXISTS journal_days (
-            date_str    TEXT PRIMARY KEY,
-            entry_count INTEGER NOT NULL DEFAULT 0,
-            word_count  INTEGER NOT NULL DEFAULT 0,
-            first_ts    INTEGER NOT NULL,
-            last_ts     INTEGER NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_journal_days_first ON journal_days(first_ts DESC);",
-    ),
-    // Migration 8: FTS5 index — separate migration so a missing FTS5 build
-    // only fails this migration and leaves journal_days intact.
-    M::up(
-        "CREATE VIRTUAL TABLE IF NOT EXISTS journal_fts USING fts5(
-            transcription_text,
-            content=transcription_history,
-            content_rowid=id
-        );
-        CREATE TRIGGER IF NOT EXISTS journal_fts_ai AFTER INSERT ON transcription_history BEGIN
-            INSERT INTO journal_fts(rowid, transcription_text)
-                VALUES (new.id, new.transcription_text);
-        END;
-        CREATE TRIGGER IF NOT EXISTS journal_fts_ad AFTER DELETE ON transcription_history BEGIN
-            INSERT INTO journal_fts(journal_fts, rowid, transcription_text)
-                VALUES ('delete', old.id, old.transcription_text);
-        END;
-        CREATE TRIGGER IF NOT EXISTS journal_fts_au AFTER UPDATE ON transcription_history BEGIN
-            INSERT INTO journal_fts(journal_fts, rowid, transcription_text)
-                VALUES ('delete', old.id, old.transcription_text);
-            INSERT INTO journal_fts(rowid, transcription_text)
-                VALUES (new.id, new.transcription_text);
-        END;",
-    ),
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
