@@ -213,11 +213,9 @@ fn apply_known_compound_splits(text: &str) -> String {
             let first_upper = original.chars().next().map(|c| c.is_uppercase()).unwrap_or(false);
             let replaced = if first_upper {
                 let mut r = replacement.to_string();
-                if let Some(first) = r.get_mut(0..1) {
-                    // uppercase first char
-                    let upper: String = first.to_uppercase().collect();
-                    r = upper + &r[1..];
-                }
+                // Uppercase the first character of the replacement string
+                let first_char = r.chars().next().unwrap_or_default();
+                r = first_char.to_uppercase().to_string() + &r[first_char.len_utf8()..];
                 r
             } else {
                 replacement.to_string()
@@ -421,7 +419,10 @@ fn preserve_case(original: &str, joined_lower: &str) -> String {
         let mut chars = joined_lower.chars();
         match chars.next() {
             None => String::new(),
-            Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+            Some(c) => {
+                let upper: String = c.to_uppercase().to_string();
+                upper + chars.as_str()
+            }
         }
     } else {
         joined_lower.to_string()
