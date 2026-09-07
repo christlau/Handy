@@ -147,6 +147,7 @@ pub fn get_journal_day(
 
 /// Full-text search over all transcriptions.
 /// Returns up to `limit` results (default 50) with a short snippet around each hit.
+/// Uses FTS5 if available, falls back to LIKE search otherwise.
 #[tauri::command]
 #[specta::specta]
 pub fn search_journal(
@@ -161,32 +162,110 @@ pub fn search_journal(
     let conn = open_db(&app)?;
     let cap = limit.unwrap_or(50).clamp(1, 200);
 
-    // Use FTS5 snippet() function for context around the match.
-    // snippet(table, column_index, start_marker, end_marker, ellipsis, num_tokens)
-    let mut stmt = conn
-        .prepare(
-            "SELECT h.id, h.timestamp, h.title,
-                    snippet(journal_fts, 0, '**', '**', '…', 20) AS snippet
-             FROM journal_fts
-             JOIN transcription_history h ON h.id = journal_fts.rowid
-             WHERE journal_fts MATCH ?1
-             ORDER BY bm25(journal_fts) -- lower = more relevant
-             LIMIT ?2",
+    // Check if the FTS5 table exists (it won't if migration 7 failed or
+    // the SQLite build didn't include FTS5).
+    let fts_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='journal_fts'",
+            [],
+            |row| row.get::<_, i64>(0),
         )
-        .map_err(|e| e.to_string())?;
+        .unwrap_or(0)
+        > 0;
 
-    let results = stmt
-        .query_map(params![query, cap], |row| {
-            Ok(JournalSearchResult {
-                id: row.get(0)?,
-                timestamp: row.get(1)?,
-                title: row.get(2)?,
-                snippet: row.get(3)?,
+    if fts_exists {
+        // FTS5 path: BM25 ranked with highlighted snippets
+        let mut stmt = conn
+            .prepare(
+                "SELECT h.id, h.timestamp, h.title,
+                        snippet(journal_fts, 0, '**', '**', '…', 20) AS snippet
+                 FROM journal_fts
+                 JOIN transcription_history h ON h.id = journal_fts.rowid
+                 WHERE journal_fts MATCH ?1
+                 ORDER BY bm25(journal_fts)
+                 LIMIT ?2",
+            )
+            .map_err(|e| e.to_string())?;
+
+        let results = stmt
+            .query_map(params![query, cap], |row| {
+                Ok(JournalSearchResult {
+                    id: row.get(0)?,
+                    timestamp: row.get(1)?,
+                    title: row.get(2)?,
+                    snippet: row.get(3)?,
+                })
             })
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
 
-    Ok(results)
+        Ok(results)
+    } else {
+        // LIKE fallback: no ranking, manual snippet extraction
+        let like_pattern = format!("%{}%", query.replace('%', "\\%").replace('_', "\\_"));
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, timestamp, title, transcription_text
+                 FROM transcription_history
+                 WHERE transcription_text LIKE ?1 ESCAPE '\\'
+                 ORDER BY timestamp DESC
+                 LIMIT ?2",
+            )
+            .map_err(|e| e.to_string())?;
+
+        let results = stmt
+            .query_map(params![like_pattern, cap], |row| {
+                let text: String = row.get(3)?;
+                Ok(JournalSearchResult {
+                    id: row.get(0)?,
+                    timestamp: row.get(1)?,
+                    title: row.get(2)?,
+                    snippet: truncate_around_match(&text, &query),
+                })
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+
+        Ok(results)
+    }
+}
+
+/// Extracts ~120 chars around the first occurrence of `needle` in `haystack`.
+/// Wraps the matched portion in `**...**` to match the FTS5 snippet format.
+fn truncate_around_match(haystack: &str, needle: &str) -> String {
+    let lower_hay = haystack.to_lowercase();
+    let lower_needle = needle.to_lowercase();
+
+    if let Some(pos) = lower_hay.find(&lower_needle) {
+        let start = pos.saturating_sub(60);
+        let end = (pos + needle.len() + 60).min(haystack.len());
+
+        // Snap to char boundaries
+        let start = haystack
+            .char_indices()
+            .map(|(i, _)| i)
+            .filter(|&i| i <= start)
+            .last()
+            .unwrap_or(0);
+        let end = haystack
+            .char_indices()
+            .map(|(i, _)| i)
+            .filter(|&i| i >= end)
+            .next()
+            .unwrap_or(haystack.len());
+
+        let prefix = if start > 0 { "…" } else { "" };
+        let suffix = if end < haystack.len() { "…" } else { "" };
+        let matched = &haystack[pos..pos + needle.len()];
+        let before = &haystack[start..pos];
+        let after_pos = pos + needle.len();
+        let after = &haystack[after_pos.min(end)..end];
+
+        format!("{prefix}{before}**{matched}**{after}{suffix}")
+    } else {
+        haystack.chars().take(120).collect()
+    }
 }
