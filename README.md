@@ -1,3 +1,50 @@
+# Handy (christlau fork)
+
+> **This is a personal fork of [cjpais/Handy](https://github.com/cjpais/Handy).** All credit for the core application goes to the original authors. This fork adds post-processing features on top of the upstream codebase. It is maintained independently and is not affiliated with the official Handy project.
+
+## What's different from upstream
+
+This fork is currently **based on upstream v0.9.6** and adds the following features:
+
+### Post-processing pipeline (opt-in, toggle in Post Process settings)
+
+All stages run deterministically after transcription, before the text is pasted. Each is independently toggleable.
+
+| Feature | Where to enable | What it does |
+|---|---|---|
+| **Filler removal** | Post Process → Text Cleanup | Removes "um", "uh", "hmm" |
+| **False start removal** | Post Process → Text Cleanup | Removes "scratch that", abandoned phrases |
+| **Spoken commands** | Post Process → Punctuation | "new line" → `\n`, "period" → `.` |
+| **Auto-punctuation** | Post Process → Punctuation | Capitalizes first word, adds trailing period |
+| **Question inference** | Post Process → Punctuation | Adds `?` to detected questions |
+| **ITN** | Post Process → Punctuation | "thirty seconds" → "30 seconds" |
+| **Fragmented word repair** | Post Process → Text Cleanup | Fuses ASR-split tokens: "call back" → "callback" |
+
+### Vocabulary learning (Advanced → Transcription)
+
+- Add terms manually — injected into Whisper's `initial_prompt` to bias recognition toward your spelling
+- Auto-learns from history edits: edit the same transcription twice and the new word is promoted automatically
+- Weight decay removes stale terms over time
+
+### History housekeeping (History tab)
+
+- **Clear All button** — deletes all unsaved recordings and history entries in one click. Starred entries are preserved.
+- **Folder size display** — shows total WAV size in the History header
+
+## How far from upstream
+
+```
+upstream/main (v0.9.6)
+       |
+       +-- merge base (our fork started from ~v0.9.4)
+       |
+feature/post-processing-phase1  ← this branch / main on this fork
+```
+
+All upstream commits through v0.9.6 are included. Our additions are purely additive — no upstream files were removed or restructured.
+
+---
+
 # Handy
 
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/WVBeWsNXK4)
