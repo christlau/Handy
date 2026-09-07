@@ -723,9 +723,10 @@ impl HistoryManager {
                 let mut stmt2 = conn.prepare(
                     "SELECT file_name FROM transcription_history WHERE saved = 1",
                 )?;
-                stmt2
+                let result: rusqlite::Result<std::collections::HashSet<String>> = stmt2
                     .query_map([], |row| row.get::<_, String>(0))?
-                    .collect::<rusqlite::Result<_>>()?
+                    .collect();
+                result?
             };
 
             for entry in read_dir.flatten() {
