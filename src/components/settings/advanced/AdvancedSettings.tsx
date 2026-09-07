@@ -25,6 +25,8 @@ import { LazyStreamClose } from "../LazyStreamClose";
 import { Input } from "../../ui/Input";
 import { Button } from "../../ui/Button";
 import { SettingContainer } from "../../ui/SettingContainer";
+import { FillerWordRemoval } from "../FillerWordRemoval";
+import { VadBackendSelector } from "../VadBackendSelector";
 
 // Inline vocab term type — does not depend on bindings.ts
 interface VocabTerm { id: number; term: string; source: string; weight: number; suppressed: boolean; }
@@ -111,6 +113,8 @@ const VocabTermsInline: React.FC = React.memo(() => {
     </SettingContainer>
   );
 });
+=======
+
 
 export const AdvancedSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -137,6 +141,7 @@ export const AdvancedSettings: React.FC = () => {
 
       <SettingsGroup title={t("settings.advanced.groups.transcription")}>
         <VoiceActivityDetection descriptionMode="tooltip" grouped={true} />
+        <FillerWordRemoval descriptionMode="tooltip" grouped={true} />
         <CustomWords descriptionMode="tooltip" grouped />
         <VocabTermsInline />
         <AppendTrailingSpace descriptionMode="tooltip" grouped={true} />
@@ -159,6 +164,7 @@ export const AdvancedSettings: React.FC = () => {
           />
           <AccelerationSelector descriptionMode="tooltip" grouped={true} />
           <LazyStreamClose descriptionMode="tooltip" grouped={true} />
+          <VadBackendSelector descriptionMode="tooltip" grouped={true} />
         </SettingsGroup>
       )}
     </div>
